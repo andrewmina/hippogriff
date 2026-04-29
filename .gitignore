@@ -1,0 +1,51 @@
+# Secrets — never commit
+.env
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+.terraform.lock.hcl
+terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+.nuxt/
+out/
+.DS_Store
+
+# Go
+*.exe
+*.test
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db

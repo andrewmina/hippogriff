@@ -1,0 +1,144 @@
+apiVersion: datadoghq.com/v2alpha1
+kind: DatadogAgent
+metadata:
+  name: hippogriff
+  namespace: datadog
+spec:
+  global:
+    clusterName: hippogriff-dev
+    site: datadoghq.com
+    credentials:
+      apiSecret:
+        secretName: {{ .Values.ddApiKeySecretName }}
+        keyName: api-key
+      appSecret:
+        secretName: {{ .Values.ddApiKeySecretName }}
+        keyName: app-key
+    # Unified Service Tagging applied cluster-wide
+    tags:
+      - "env:dev"
+      - "service:hippogriff"
+      - "team:platform"
+
+  features:
+    # ── APM ──────────────────────────────────────────────────────────────────
+    apm:
+      enabled: true
+      instrumentation:
+        enabled: true
+        libVersions:
+          python: "2"
+          js: "5"
+          java: "1"
+          dotnet: "3"
+          ruby: "2"
+
+    # ── Log Collection ────────────────────────────────────────────────────────
+    logCollection:
+      enabled: true
+      containerCollectAll: true
+      containerCollectUsingFiles: true
+
+    # ── Live Processes ────────────────────────────────────────────────────────
+    liveProcessCollection:
+      enabled: true
+
+    liveContainerCollection:
+      enabled: true
+
+    # ── Network Performance Monitoring ────────────────────────────────────────
+    npm:
+      enabled: true
+
+    # ── Universal Service Monitoring ──────────────────────────────────────────
+    usm:
+      enabled: true
+
+    # ── Data Streams Monitoring ───────────────────────────────────────────────
+    dataStreamsMonitoring:
+      enabled: true
+
+    # ── Continuous Profiler ────────────────────────────────────────────────────
+    # Enabled per-service via DD_PROFILING_ENABLED env var
+
+    # ── CSPM (Cloud Security Posture Management) ──────────────────────────────
+    cspm:
+      enabled: true
+
+    # ── CWS (Cloud Workload Security) ─────────────────────────────────────────
+    cws:
+      enabled: true
+      syscallMonitorEnabled: true
+
+    # ── OOM Kill detection ────────────────────────────────────────────────────
+    oomKill:
+      enabled: true
+
+    # ── TCP Queue Length ──────────────────────────────────────────────────────
+    tcpQueueLength:
+      enabled: true
+
+    # ── eBPF Check ────────────────────────────────────────────────────────────
+    ebpfCheck:
+      enabled: true
+
+    # ── Prometheus scraping ───────────────────────────────────────────────────
+    prometheusScrape:
+      enabled: true
+      enableServiceEndpoints: true
+
+    # ── Cluster Checks ────────────────────────────────────────────────────────
+    clusterChecks:
+      enabled: true
+
+    # ── Admission Controller (auto-inject env vars for UST) ──────────────────
+    admissionController:
+      enabled: true
+      mutateUnlabelled: false
+      serviceName: datadog-admission-controller
+
+    # ── Remote Configuration ──────────────────────────────────────────────────
+    remoteConfiguration:
+      enabled: true
+
+    # ── OTLP ingest (optional — for services sending OTLP traces) ────────────
+    otlp:
+      receiver:
+        protocols:
+          grpc:
+            enabled: true
+          http:
+            enabled: true
+
+  # ── Agent overrides ───────────────────────────────────────────────────────
+  override:
+    nodeAgent:
+      tolerations:
+        # Run on spot nodes too
+        - key: "kubernetes.azure.com/scalesetpriority"
+          operator: "Equal"
+          value: "spot"
+          effect: "NoSchedule"
+      env:
+        - name: DD_CONTAINER_EXCLUDE
+          value: "name:datadog-agent name:datadog-operator"
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+
+    clusterAgent:
+      replicas: 1
+      env:
+        - name: DD_CLUSTER_CHECKS_ENABLED
+          value: "true"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "250m"
+          memory: "256Mi"

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: datadog-agent
+description: DatadogAgent CRD for Hippogriff — configures the Datadog Operator
+type: application
+version: 0.1.0
+appVersion: "7"

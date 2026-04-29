@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odds-engine
+  namespace: hippogriff
+  labels:
+    app: odds-engine
+    tags.datadoghq.com/env: dev
+    tags.datadoghq.com/service: odds-engine
+    tags.datadoghq.com/version: "1.0.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: odds-engine
+  template:
+    metadata:
+      labels:
+        app: odds-engine
+        tags.datadoghq.com/env: dev
+        tags.datadoghq.com/service: odds-engine
+        tags.datadoghq.com/version: "1.0.0"
+      annotations:
+        # Admission Controller picks these up and injects DD_* env vars
+        admission.datadoghq.com/python-lib.version: "v2"
+    spec:
+      tolerations:
+        - key: "kubernetes.azure.com/scalesetpriority"
+          operator: "Equal"
+          value: "spot"
+          effect: "NoSchedule"
+      containers:
+        - name: odds-engine
+          image: hippogriffacr.azurecr.io/hippogriff/odds-engine:latest
+          ports:
+            - containerPort: 8000
+          env:
+            # Unified Service Tagging
+            - name: DD_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/env']
+            - name: DD_SERVICE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/service']
+            - name: DD_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/version']
+            # Agent connection
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_DOGSTATSD_PORT
+              value: "8125"
+            - name: DD_TRACE_AGENT_PORT
+              value: "8126"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odds-engine
+  namespace: hippogriff
+  labels:
+    app: odds-engine
+  annotations:
+    # Tells Datadog to scrape Prometheus metrics from this service
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: odds-engine
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+# Service catalog entry
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odds-engine-service-catalog
+  namespace: hippogriff
+  annotations:
+    datadog/service-catalog: "true"
+data:
+  service.datadog.yaml: |
+    schema-version: v2.2
+    dd-service: odds-engine
+    team: platform
+    contacts:
+      - type: slack
+        contact: "#hippogriff-platform"
+    repos:
+      - url: https://github.com/your-org/hippogriff
+        provider: github
+        name: hippogriff
+    links:
+      - name: Runbook
+        type: runbook
+        url: https://github.com/your-org/hippogriff/blob/main/services/odds-engine/RUNBOOK.md
+    tags:
+      - "domain:betting"
+      - "tier:critical"
+    integrations:
+      pagerduty:
+        service-url: https://your-pagerduty.pagerduty.com/services/odds-engine
