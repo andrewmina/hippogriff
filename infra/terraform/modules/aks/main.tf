@@ -16,10 +16,11 @@ resource "azurerm_kubernetes_cluster" "main" {
   default_node_pool {
     name                = "system"
     node_count          = 1
-    vm_size             = "Standard_B2s"
+    vm_size             = "Standard_B2ps_v2"
     os_disk_size_gb     = 30
     type                = "VirtualMachineScaleSets"
-    only_critical_addons_enabled = true
+    only_critical_addons_enabled = false
+    temporary_name_for_rotation  = "tmpnodepool"
 
     node_labels = {
       "nodepool-type" = "system"
@@ -53,7 +54,7 @@ resource "azurerm_kubernetes_cluster" "main" {
 resource "azurerm_kubernetes_cluster_node_pool" "app" {
   name                  = "app"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
-  vm_size               = "Standard_B2s"
+  vm_size               = "Standard_B2ps_v2"
   node_count            = 2
   os_disk_size_gb       = 30
 

@@ -12,7 +12,7 @@ variable "acr_id" {
 }
 variable "kubernetes_version" {
   type    = string
-  default = "1.28"
+  default = "1.33.6"
 }
 variable "tags" {
   type    = map(string)

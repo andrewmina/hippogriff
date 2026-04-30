@@ -1,6 +1,7 @@
 variable "subscription_id" {
   description = "Azure subscription ID"
   type        = string
+  default     = "1850960f-0fd1-4822-be67-ba73f9583590"
 }
 
 variable "dd_api_key" {
@@ -42,5 +43,5 @@ variable "environment" {
 variable "region" {
   description = "Azure region"
   type        = string
-  default     = "eastus"
+  default     = "centralus"
 }

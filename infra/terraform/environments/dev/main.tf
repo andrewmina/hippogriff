@@ -50,26 +50,15 @@ provider "datadog" {
   api_url = "https://api.${var.dd_site}"
 }
 
-# AKS credentials for kubernetes + helm providers
-data "azurerm_kubernetes_cluster" "main" {
-  name                = module.aks.cluster_name
-  resource_group_name = azurerm_resource_group.main.name
-  depends_on          = [module.aks]
-}
-
 provider "kubernetes" {
-  host                   = data.azurerm_kubernetes_cluster.main.kube_config.0.host
-  client_certificate     = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
-  client_key             = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+  config_path    = "~/.kube/config"
+  config_context = "hippogriff-dev"
 }
 
 provider "helm" {
   kubernetes {
-    host                   = data.azurerm_kubernetes_cluster.main.kube_config.0.host
-    client_certificate     = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
-    client_key             = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.client_key)
-    cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+    config_path    = "~/.kube/config"
+    config_context = "hippogriff-dev"
   }
 }
 
@@ -203,7 +192,7 @@ resource "kubernetes_secret" "anthropic_key" {
 # DatadogAgent CRD — installs the agent DaemonSet + Cluster Agent
 resource "helm_release" "datadog_agent" {
   name      = "datadog-agent"
-  chart     = "${path.module}/../../../infra/k8s/datadog-operator/datadog-agent"
+  chart     = "${path.module}/../../../../infra/k8s/datadog-operator/datadog-agent"
   namespace = kubernetes_namespace.datadog.metadata[0].name
 
   set {

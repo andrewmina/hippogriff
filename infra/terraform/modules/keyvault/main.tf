@@ -37,13 +37,35 @@ resource "azurerm_key_vault_secret" "anthropic_api_key" {
   key_vault_id = azurerm_key_vault.main.id
 }
 
-variable "name" { type = string }
-variable "resource_group_name" { type = string }
-variable "location" { type = string }
-variable "dd_api_key" { type = string; sensitive = true }
-variable "dd_app_key" { type = string; sensitive = true }
-variable "anthropic_api_key" { type = string; sensitive = true }
-variable "tags" { type = map(string); default = {} }
+variable "name" {
+  type = string
+}
+variable "resource_group_name" {
+  type = string
+}
+variable "location" {
+  type = string
+}
+variable "dd_api_key" {
+  type      = string
+  sensitive = true
+}
+variable "dd_app_key" {
+  type      = string
+  sensitive = true
+}
+variable "anthropic_api_key" {
+  type      = string
+  sensitive = true
+}
+variable "tags" {
+  type    = map(string)
+  default = {}
+}
 
-output "key_vault_id" { value = azurerm_key_vault.main.id }
-output "key_vault_uri" { value = azurerm_key_vault.main.vault_uri }
+output "key_vault_id" {
+  value = azurerm_key_vault.main.id
+}
+output "key_vault_uri" {
+  value = azurerm_key_vault.main.vault_uri
+}
