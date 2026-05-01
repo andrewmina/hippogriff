@@ -128,3 +128,43 @@ chaos-stop: ## Remove all chaos
 dd-status: ## Check Datadog agent status on all nodes
 	kubectl exec -n datadog $$(kubectl get pods -n datadog -l app=datadog-agent -o name | head -1) \
 	  -- agent status
+
+# ── ACR Build Tasks (no local Docker needed) ───────────────────────────────
+
+ACR_SERVER = hippogriffacrdev.azurecr.io
+
+acr-build: ## Build and push a single service via ACR build task
+	@if [ -z "$(svc)" ]; then echo "Usage: make acr-build svc=odds-engine"; exit 1; fi
+	az acr build \
+	  --registry hippogriffacrdev \
+	  --image hippogriff/$(svc):latest \
+	  --image hippogriff/$(svc):$(shell git rev-parse --short HEAD 2>/dev/null || echo dev) \
+	  services/$(svc)
+
+acr-build-all: ## Build and push all Phase 2 services via ACR build tasks
+	@for svc in odds-engine bet-service; do \
+	  echo "🏗  Building $$svc in ACR..."; \
+	  az acr build \
+	    --registry hippogriffacrdev \
+	    --image hippogriff/$$svc:latest \
+	    services/$$svc; \
+	  echo "✅ $$svc done"; \
+	done
+
+deploy-phase2: ## Deploy all Phase 2 resources to the cluster
+	kubectl apply -f infra/k8s/postgres/
+	kubectl apply -f services/odds-engine/k8s/
+	kubectl apply -f services/bet-service/k8s/
+	@echo "Waiting for deployments to be ready..."
+	kubectl rollout status deployment/odds-engine -n hippogriff --timeout=120s
+	kubectl rollout status deployment/bet-service -n hippogriff --timeout=120s
+	@echo "✅ Phase 2 deployed"
+
+seed: ## Seed events in odds-engine
+	kubectl exec -n hippogriff deploy/odds-engine -- curl -sf -X POST localhost:8000/seed | python3 -m json.tool
+
+logs-odds: ## Tail odds-engine logs
+	kubectl logs -n hippogriff deploy/odds-engine -f
+
+logs-bet: ## Tail bet-service logs
+	kubectl logs -n hippogriff deploy/bet-service -f

@@ -1,0 +1,198 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: hippogriff
+data:
+  init.sql: |
+    -- Create the Datadog DBM user with required permissions
+    CREATE USER datadog WITH PASSWORD 'datadog_dbm_password';
+    GRANT pg_monitor TO datadog;
+    GRANT SELECT ON pg_stat_database TO datadog;
+
+    -- Create the hippogriff application database
+    CREATE DATABASE hippogriff;
+
+    -- Connect to hippogriff db and set up schema
+    \c hippogriff;
+
+    CREATE TABLE IF NOT EXISTS bets (
+        bet_id          UUID PRIMARY KEY,
+        user_id         UUID NOT NULL,
+        event_id        TEXT NOT NULL,
+        selection       TEXT NOT NULL,
+        stake           NUMERIC(12, 2) NOT NULL,
+        odds            NUMERIC(8, 3) NOT NULL,
+        potential_payout NUMERIC(12, 2) NOT NULL,
+        status          TEXT NOT NULL DEFAULT 'pending',
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        settled_at      TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS bets_user_idx   ON bets(user_id);
+    CREATE INDEX IF NOT EXISTS bets_event_idx  ON bets(event_id);
+    CREATE INDEX IF NOT EXISTS bets_status_idx ON bets(status);
+    CREATE INDEX IF NOT EXISTS bets_created_idx ON bets(created_at DESC);
+
+    -- Grant app user access
+    CREATE USER hippogriff WITH PASSWORD 'hippogriff';
+    GRANT ALL PRIVILEGES ON DATABASE hippogriff TO hippogriff;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO hippogriff;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO hippogriff;
+
+    -- Enable pg_stat_statements for DBM query metrics
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: hippogriff
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "hippogriff_root_password"
+  APP_PASSWORD: "hippogriff"
+  DBM_PASSWORD: "datadog_dbm_password"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: hippogriff
+  labels:
+    app: postgres
+    tags.datadoghq.com/env: dev
+    tags.datadoghq.com/service: postgres
+    tags.datadoghq.com/version: "15"
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+        tags.datadoghq.com/env: dev
+        tags.datadoghq.com/service: postgres
+        tags.datadoghq.com/version: "15"
+      annotations:
+        # ── Datadog Postgres Integration + DBM ─────────────────────────────
+        # The Agent autodiscovers this pod and configures the postgres check
+        ad.datadoghq.com/postgres.checks: |
+          {
+            "postgres": {
+              "init_config": {},
+              "instances": [
+                {
+                  "host": "%%host%%",
+                  "port": 5432,
+                  "username": "datadog",
+                  "password": "datadog_dbm_password",
+                  "dbname": "hippogriff",
+                  "dbm": true,
+                  "collect_activity_metrics": true,
+                  "collect_count_metrics": true,
+                  "collect_database_size_metrics": true,
+                  "query_samples": {
+                    "enabled": true
+                  },
+                  "query_metrics": {
+                    "enabled": true
+                  },
+                  "query_activity": {
+                    "enabled": true
+                  },
+                  "tags": [
+                    "env:dev",
+                    "service:postgres",
+                    "db:hippogriff"
+                  ]
+                }
+              ]
+            }
+          }
+    spec:
+      tolerations:
+        - key: "kubernetes.azure.com/scalesetpriority"
+          operator: "Equal"
+          value: "spot"
+          effect: "NoSchedule"
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_USER
+              value: postgres
+            # Enable pg_stat_statements at startup
+            - name: POSTGRES_INITDB_ARGS
+              value: ""
+          args:
+            - postgres
+            - -c
+            - shared_preload_libraries=pg_stat_statements
+            - -c
+            - pg_stat_statements.max=10000
+            - -c
+            - pg_stat_statements.track=all
+            - -c
+            - track_activity_query_size=4096
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: postgres-init
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: hippogriff
+  labels:
+    app: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP

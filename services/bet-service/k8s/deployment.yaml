@@ -1,30 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: odds-engine
+  name: bet-service
   namespace: hippogriff
   labels:
-    app: odds-engine
+    app: bet-service
     tags.datadoghq.com/env: dev
-    tags.datadoghq.com/service: odds-engine
+    tags.datadoghq.com/service: bet-service
     tags.datadoghq.com/version: "1.0.0"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: odds-engine
+      app: bet-service
   template:
     metadata:
       labels:
-        app: odds-engine
+        app: bet-service
         tags.datadoghq.com/env: dev
-        tags.datadoghq.com/service: odds-engine
+        tags.datadoghq.com/service: bet-service
         tags.datadoghq.com/version: "1.0.0"
       annotations:
         admission.datadoghq.com/python-lib.version: "v2"
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8000"
-        prometheus.io/path: "/metrics"
     spec:
       tolerations:
         - key: "kubernetes.azure.com/scalesetpriority"
@@ -32,8 +29,8 @@ spec:
           value: "spot"
           effect: "NoSchedule"
       containers:
-        - name: odds-engine
-          image: hippogriffacrdev.azurecr.io/hippogriff/odds-engine:latest
+        - name: bet-service
+          image: hippogriffacrdev.azurecr.io/hippogriff/bet-service:latest
           ports:
             - containerPort: 8000
           env:
@@ -63,8 +60,18 @@ spec:
               value: "true"
             - name: DD_PROFILING_ENABLED
               value: "true"
+            - name: DD_APPSEC_ENABLED
+              value: "true"
+            - name: DD_DBM_PROPAGATION_MODE
+              value: "full"
             - name: DD_TRACE_SAMPLE_RATE
               value: "1.0"
+            - name: ODDS_ENGINE_URL
+              value: "http://odds-engine.hippogriff.svc.cluster.local:8000"
+            - name: FRAUD_SERVICE_URL
+              value: "http://fraud-detector.hippogriff.svc.cluster.local:8000"
+            - name: DATABASE_URL
+              value: "postgresql://hippogriff:hippogriff@postgres.hippogriff.svc.cluster.local:5432/hippogriff"
           resources:
             requests:
               cpu: "100m"
@@ -88,13 +95,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: odds-engine
+  name: bet-service
   namespace: hippogriff
   labels:
-    app: odds-engine
+    app: bet-service
 spec:
   selector:
-    app: odds-engine
+    app: bet-service
   ports:
     - name: http
       port: 8000
