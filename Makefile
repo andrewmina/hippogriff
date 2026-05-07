@@ -135,7 +135,7 @@ ACR_SERVER = hippogriffacrdev.azurecr.io
 
 acr-build: ## Build and push a single service via ACR build task
 	@if [ -z "$(svc)" ]; then echo "Usage: make acr-build svc=odds-engine"; exit 1; fi
-	az acr build \
+	az acr build --platform linux/arm64 \
 	  --registry hippogriffacrdev \
 	  --image hippogriff/$(svc):latest \
 	  --image hippogriff/$(svc):$(shell git rev-parse --short HEAD 2>/dev/null || echo dev) \
@@ -144,7 +144,7 @@ acr-build: ## Build and push a single service via ACR build task
 acr-build-all: ## Build and push all Phase 2 services via ACR build tasks
 	@for svc in odds-engine bet-service; do \
 	  echo "🏗  Building $$svc in ACR..."; \
-	  az acr build \
+	  az acr build --platform linux/arm64 \
 	    --registry hippogriffacrdev \
 	    --image hippogriff/$$svc:latest \
 	    services/$$svc; \

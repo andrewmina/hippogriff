@@ -38,19 +38,23 @@ spec:
             - containerPort: 8000
           env:
             - name: DD_ENV
-              valueFrom:
+              value: "hippogriff-agent.datadog.svc.cluster.local"
+          - name: DD_AGENT_HOST_REPLACED
                 fieldRef:
                   fieldPath: metadata.labels['tags.datadoghq.com/env']
             - name: DD_SERVICE
-              valueFrom:
+              value: "hippogriff-agent.datadog.svc.cluster.local"
+          - name: DD_AGENT_HOST_REPLACED
                 fieldRef:
                   fieldPath: metadata.labels['tags.datadoghq.com/service']
             - name: DD_VERSION
-              valueFrom:
+              value: "hippogriff-agent.datadog.svc.cluster.local"
+          - name: DD_AGENT_HOST_REPLACED
                 fieldRef:
                   fieldPath: metadata.labels['tags.datadoghq.com/version']
             - name: DD_AGENT_HOST
-              valueFrom:
+              value: "hippogriff-agent.datadog.svc.cluster.local"
+          - name: DD_AGENT_HOST_REPLACED
                 fieldRef:
                   fieldPath: status.hostIP
             - name: DD_DOGSTATSD_PORT

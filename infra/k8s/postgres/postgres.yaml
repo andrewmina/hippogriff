@@ -132,8 +132,12 @@ spec:
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_DB
               value: postgres
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_USER
               value: postgres
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
             # Enable pg_stat_statements at startup
             - name: POSTGRES_INITDB_ARGS
               value: ""
@@ -150,6 +154,7 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
+            subPath: pgdata
             - name: init-scripts
               mountPath: /docker-entrypoint-initdb.d
           resources:
