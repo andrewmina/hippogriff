@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --dd-purple: #632CA6;
+  --hippo-gold: #F5A623;
+  --hippo-dark: #0A0A1A;
+  --hippo-card: #111827;
+  --hippo-border: #1F2937;
+}
+
+body {
+  background: var(--hippo-dark);
+}
+
+/* Odds button animation */
+.odds-btn {
+  @apply bg-gray-800 hover:bg-purple-700 border border-gray-700 hover:border-purple-500
+         text-white font-bold py-2 px-4 rounded-lg transition-all duration-200
+         cursor-pointer select-none;
+}
+
+.odds-btn:active {
+  @apply scale-95;
+}
+
+.odds-btn.selected {
+  @apply bg-purple-600 border-purple-400 ring-2 ring-purple-400 ring-opacity-50;
+}
+
+/* Card styles */
+.card {
+  @apply bg-gray-900 border border-gray-800 rounded-xl p-4;
+}
+
+/* Sport tab */
+.sport-tab {
+  @apply px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+         text-gray-400 hover:text-white hover:bg-gray-800 cursor-pointer;
+}
+
+.sport-tab.active {
+  @apply bg-purple-700 text-white;
+}
+
+/* Status badge */
+.badge-live {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900 text-green-300;
+}
+
+.badge-suspended {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-900 text-red-300;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #632CA6; }
